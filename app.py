@@ -1,22 +1,27 @@
-import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-from azure.openai import AzureOpenAI
+from openai import AzureOpenAI
 from dotenv import load_dotenv
+import os
 
 # Load environment variables
 load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)  # Enable CORS
 
-# Initialize Azure OpenAI client
-chatClient = AzureOpenAI(
+# Initialize OpenAI client
+openai = AzureOpenAI(
     azure_endpoint=os.getenv("AOAI_ENDPOINT"),
     api_key=os.getenv("AOAI_KEY"),
     api_version="2023-05-15"
 )
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
 @app.route('/api/generate_email_response', methods=['POST'])
@@ -28,28 +33,18 @@ def generate_email_response():
     email_recipients = data.get("email_recipients", "")
     email_timestamp = data.get("email_timestamp", "")
 
-    custom_prompt = (
-        f"Subject: {email_subject}\n"
-        f"From: {email_sender}\n"
-        f"To: {email_recipients}\n"
-        f"Date: {email_timestamp}\n\n"
-        f"{email_content}\n\n"
-        "AI Generated Response:"
-    )
-
     try:
-        # Create chat completion request
-        chatResponse = chatClient.chat.completions.create(
-            model="gpt-35-turbo",  # Use an available model
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": custom_prompt}
-            ]
+        # Generate email response using OpenAI
+        response = openai.Completion.create(
+            engine="text-davinci-003",  # Use an available engine
+            prompt=f"Generate a response for the following email content:\n\n{
+                email_content}",
+            temperature=0.7,
+            max_tokens=150
         )
 
-        response_text = chatResponse.choices[0].message.content.strip()
-
-        return jsonify({"response": response_text})
+        generated_response = response.choices[0].text.strip()
+        return jsonify({"response": generated_response})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

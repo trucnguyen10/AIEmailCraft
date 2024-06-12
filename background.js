@@ -19,12 +19,6 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         console.log('Recipients:', recipients);
         console.log('Timestamp:', timestamp);
 
-        if (!content || !subject || !emailSender || !recipients || !timestamp) {
-            console.error('Missing email data fields:', emailData);
-            sendResponse({ error: 'Missing email data fields' });
-            return;
-        }
-
         // Call your Flask backend API to generate the email response
         fetch('http://localhost:5000/api/generate_email_response', {
             method: 'POST',

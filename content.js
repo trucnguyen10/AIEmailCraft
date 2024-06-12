@@ -20,14 +20,26 @@ function getEmailData() {
     const senderEmail = senderContainer ? senderContainer.getAttribute('email') : 'Sender email not found';
     emailData.sender = senderName && senderEmail ? `${senderName} <${senderEmail}>` : 'Sender not found';
 
-    // Extract the email body content
-    const bodyContainer = document.querySelector('.a3s.aXjCH');
+    // Attempt to extract the email body content using multiple selectors
+    let bodyContainer = document.querySelector('.a3s.aXjCH');
+    if (!bodyContainer) {
+        bodyContainer = document.querySelector('div[role="listitem"] .ii.gt');
+    }
+    if (!bodyContainer) {
+        bodyContainer = document.querySelector('.a3s');
+    }
     emailData.body = bodyContainer ? bodyContainer.innerText : 'Body not found';
+
+    // Log body extraction details
+    console.log('Body Container:', bodyContainer);
+    console.log('Body Content:', emailData.body);
 
     // Extract the email recipients
     const recipientsContainer = document.querySelectorAll('.vR');
-    if (recipientsContainer) {
+    if (recipientsContainer.length > 0) {
         emailData.recipients = Array.from(recipientsContainer).map(recipient => recipient.innerText).join(', ');
+    } else {
+        emailData.recipients = 'Recipients not found';
     }
 
     // Extract the email timestamp
@@ -41,6 +53,7 @@ function getEmailData() {
 
 // Function to handle changes in the Gmail page
 function handleMutation(mutations) {
+    console.log('Mutation observed:', mutations);
     mutations.forEach(mutation => {
         if (mutation.type === 'childList' && mutation.addedNodes.length) {
             const emailData = getEmailData();
@@ -53,6 +66,8 @@ function handleMutation(mutations) {
                         console.log('Response from background script:', response);
                     }
                 });
+            } else {
+                console.error('Incomplete email data:', emailData);
             }
         }
     });
