@@ -3,6 +3,7 @@ from flask_cors import CORS
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 import os
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -10,6 +11,9 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Enable CORS
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
 
 # Initialize OpenAI client
 openai = AzureOpenAI(
@@ -33,6 +37,8 @@ def generate_email_response():
     email_recipients = data.get("email_recipients", "")
     email_timestamp = data.get("email_timestamp", "")
 
+    logging.debug(f"Received email data: {data}")
+
     try:
         # Generate email response using OpenAI
         response = openai.Completion.create(
@@ -44,9 +50,11 @@ def generate_email_response():
         )
 
         generated_response = response.choices[0].text.strip()
+        logging.debug(f"Generated response: {generated_response}")
         return jsonify({"response": generated_response})
 
     except Exception as e:
+        logging.error(f"Error generating response: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 

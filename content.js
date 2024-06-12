@@ -53,24 +53,32 @@ function getEmailData() {
 
 // Function to handle changes in the Gmail page
 function handleMutation(mutations) {
-    console.log('Mutation observed:', mutations);
-    mutations.forEach(mutation => {
-        if (mutation.type === 'childList' && mutation.addedNodes.length) {
-            const emailData = getEmailData();
-            if (emailData.subject !== 'Subject not found' && emailData.sender !== 'Sender not found' && emailData.body !== 'Body not found') {
-                console.log('Sending email data to background script');
-                chrome.runtime.sendMessage({ action: 'generateEmailResponse', emailData: emailData }, response => {
-                    if (chrome.runtime.lastError) {
-                        console.error('Error sending message to background script:', chrome.runtime.lastError.message);
+    try {
+        console.log('Mutation observed:', mutations);
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length) {
+                const emailData = getEmailData();
+                if (emailData.subject !== 'Subject not found' && emailData.sender !== 'Sender not found' && emailData.body !== 'Body not found') {
+                    console.log('Sending email data to background script');
+                    if (chrome.runtime && chrome.runtime.sendMessage) {
+                        chrome.runtime.sendMessage({ action: 'generateEmailResponse', emailData: emailData }, response => {
+                            if (chrome.runtime.lastError) {
+                                console.error('Error sending message to background script:', chrome.runtime.lastError.message);
+                            } else {
+                                console.log('Response from background script:', response);
+                            }
+                        });
                     } else {
-                        console.log('Response from background script:', response);
+                        console.error('chrome.runtime or chrome.runtime.sendMessage is not available');
                     }
-                });
-            } else {
-                console.error('Incomplete email data:', emailData);
+                } else {
+                    console.error('Incomplete email data:', emailData);
+                }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error in handleMutation:', error);
+    }
 }
 
 // Create a MutationObserver to watch for changes in the Gmail page
