@@ -6,7 +6,6 @@ function getEmailData() {
         subject: null,
         sender: null,
         body: null,
-        recipients: null,
         timestamp: null
     };
 
@@ -34,14 +33,6 @@ function getEmailData() {
     console.log('Body Container:', bodyContainer);
     console.log('Body Content:', emailData.body);
 
-    // Extract the email recipients
-    const recipientsContainer = document.querySelectorAll('.vR');
-    if (recipientsContainer.length > 0) {
-        emailData.recipients = Array.from(recipientsContainer).map(recipient => recipient.innerText).join(', ');
-    } else {
-        emailData.recipients = 'Recipients not found';
-    }
-
     // Extract the email timestamp
     const timestampContainer = document.querySelector('.g3');
     emailData.timestamp = timestampContainer ? timestampContainer.getAttribute('title') : 'Timestamp not found';
@@ -58,19 +49,10 @@ function handleMutation(mutations) {
         mutations.forEach(mutation => {
             if (mutation.type === 'childList' && mutation.addedNodes.length) {
                 const emailData = getEmailData();
-                if (emailData.subject !== 'Subject not found' && emailData.sender !== 'Sender not found' && emailData.body !== 'Body not found') {
+                console.log('Checking email data:', emailData);
+                if (emailData.body !== 'Body not found') {
                     console.log('Sending email data to background script');
-                    if (chrome.runtime && chrome.runtime.sendMessage) {
-                        chrome.runtime.sendMessage({ action: 'generateEmailResponse', emailData: emailData }, response => {
-                            if (chrome.runtime.lastError) {
-                                console.error('Error sending message to background script:', chrome.runtime.lastError.message);
-                            } else {
-                                console.log('Response from background script:', response);
-                            }
-                        });
-                    } else {
-                        console.error('chrome.runtime or chrome.runtime.sendMessage is not available');
-                    }
+                    tryToSendMessage(emailData);
                 } else {
                     console.error('Incomplete email data:', emailData);
                 }
@@ -78,6 +60,31 @@ function handleMutation(mutations) {
         });
     } catch (error) {
         console.error('Error in handleMutation:', error);
+    }
+}
+
+// Function to try sending the message, with retries if necessary
+function tryToSendMessage(emailData, retries = 3) {
+    try {
+        if (chrome.runtime && chrome.runtime.sendMessage) {
+            console.log('Attempting to send message with email data:', emailData);
+            chrome.runtime.sendMessage({ action: 'generateEmailResponse', emailData: emailData }, response => {
+                if (chrome.runtime.lastError) {
+                    console.error('Error sending message to background script:', chrome.runtime.lastError.message);
+                } else {
+                    console.log('Response from background script:', response);
+                }
+            });
+        } else {
+            throw new Error('chrome.runtime or chrome.runtime.sendMessage is not available');
+        }
+    } catch (e) {
+        if (retries > 0) {
+            console.error(`Retrying sendMessage due to error: ${e.message}. Retries left: ${retries - 1}`);
+            setTimeout(() => tryToSendMessage(emailData, retries - 1), 1000);
+        } else {
+            console.error('Failed to send message after multiple attempts:', e);
+        }
     }
 }
 
